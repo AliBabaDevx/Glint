@@ -270,7 +270,7 @@
 
 <section class="hero">
   <div class="wrap">
-    <span class="eyebrow"><span class="dot"></span> v1.0.1 — English Localization Update</span>
+    <span class="eyebrow" id="release-eyebrow"><span class="dot"></span> v1.0.1 — English Localization Update</span>
     <h1>Manage your games.<br><span class="grad">Lift your setup.</span></h1>
     <p class="sub">GameLift is an open-source Windows app for keeping game profiles, settings, and tools organized in one clean place.</p>
 
@@ -381,27 +381,29 @@
     </div>
 
     <div class="changelog">
-      <div class="release-card latest">
-        <div class="release-top">
-          <span class="badge">Latest</span>
-          <span class="release-version">v1.0.1</span>
-          <span class="release-date">English Localization Update</span>
+      <div id="release-list">
+        <div class="release-card latest">
+          <div class="release-top">
+            <span class="badge">Latest</span>
+            <span class="release-version">v1.0.1</span>
+            <span class="release-date">English Localization Update</span>
+          </div>
+          <ul>
+            <li>Added full English localization across the app</li>
+            <li>General stability and polish improvements</li>
+          </ul>
         </div>
-        <ul>
-          <li>Added full English localization across the app</li>
-          <li>General stability and polish improvements</li>
-        </ul>
-      </div>
 
-      <div class="release-card">
-        <div class="release-top">
-          <span class="release-version">v1.0.0</span>
-          <span class="release-date">Initial release</span>
+        <div class="release-card">
+          <div class="release-top">
+            <span class="release-version">v1.0.0</span>
+            <span class="release-date">Initial release</span>
+          </div>
+          <ul>
+            <li>First public release of GameLift</li>
+            <li>Profile management, settings, and gaming tools</li>
+          </ul>
         </div>
-        <ul>
-          <li>First public release of GameLift</li>
-          <li>Profile management, settings, and gaming tools</li>
-        </ul>
       </div>
 
       <div class="view-all">
@@ -430,6 +432,79 @@
     <div class="footer-small">GameLift is free and open-source. Not affiliated with Amazon GameLift.</div>
   </div>
 </footer>
+
+<script>
+(function () {
+  var REPO = "AliBabaDevx/GameLift-v1.0";
+  var listEl = document.getElementById("release-list");
+  var eyebrowEl = document.getElementById("release-eyebrow");
+
+  function escapeHtml(str) {
+    var d = document.createElement("div");
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function formatDate(iso) {
+    var d = new Date(iso);
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  // Turn a release body's markdown bullet lines into <li> items.
+  // Falls back to a short plain-text summary if there are no bullets.
+  function bodyToListItems(body) {
+    if (!body) return [];
+    var lines = body.split("\n").map(function (l) { return l.trim(); });
+    var bullets = lines.filter(function (l) { return /^[-*]\s+/.test(l); })
+                        .map(function (l) { return l.replace(/^[-*]\s+/, ""); })
+                        .slice(0, 5);
+    if (bullets.length) return bullets;
+    var plain = lines.filter(Boolean).join(" ");
+    return plain ? [plain.slice(0, 160)] : [];
+  }
+
+  fetch("https://api.github.com/repos/" + REPO + "/releases?per_page=5")
+    .then(function (res) {
+      if (!res.ok) throw new Error("GitHub API error " + res.status);
+      return res.json();
+    })
+    .then(function (releases) {
+      if (!Array.isArray(releases) || releases.length === 0) return;
+
+      // Hero eyebrow -> latest release
+      var latest = releases[0];
+      if (eyebrowEl) {
+        eyebrowEl.innerHTML = '<span class="dot"></span> ' +
+          escapeHtml(latest.tag_name) + " — " + escapeHtml(latest.name || "Latest release");
+      }
+
+      // Changelog list -> up to 5 most recent releases
+      var html = releases.map(function (rel, i) {
+        var items = bodyToListItems(rel.body);
+        var listHtml = items.length
+          ? "<ul>" + items.map(function (t) { return "<li>" + escapeHtml(t) + "</li>"; }).join("") + "</ul>"
+          : "";
+        return (
+          '<div class="release-card' + (i === 0 ? " latest" : "") + '">' +
+            '<div class="release-top">' +
+              (i === 0 ? '<span class="badge">Latest</span>' : "") +
+              '<span class="release-version">' + escapeHtml(rel.tag_name) + "</span>" +
+              '<span class="release-date">' + escapeHtml(rel.name || formatDate(rel.published_at)) + "</span>" +
+            "</div>" +
+            listHtml +
+          "</div>"
+        );
+      }).join("");
+
+      if (listEl) listEl.innerHTML = html;
+    })
+    .catch(function (err) {
+      // Network error, rate limit, etc. — the static fallback content already
+      // in the page stays exactly as it is, so nothing breaks for the visitor.
+      console.warn("GameLift: could not load live release data, showing fallback.", err);
+    });
+})();
+</script>
 
 </body>
 </html>

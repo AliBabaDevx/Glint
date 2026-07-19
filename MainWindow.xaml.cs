@@ -24,7 +24,12 @@ public partial class MainWindow : Window
     }
 
     private void SocialButton_Click(object sender, RoutedEventArgs e)
-    {     
+    {
+       MessageBox.Show(
+           "Social links will be available soon!",
+           "GameLift",
+           MessageBoxButton.OK,
+           MessageBoxImage.Information);
     }
     
     private void RefreshProfiles()
@@ -48,26 +53,28 @@ public partial class MainWindow : Window
         CategoryBox.Text = profile.Category; ArgumentsBox.Text = profile.LaunchArguments; FavoriteBox.IsChecked = profile.IsFavorite;
         ProcessesBox.Text = profile.ProcessesToClose; PowerPlanBox.IsChecked = profile.UseHighPerformancePlan;
         OverlayBox.IsChecked = profile.ShowPerformanceOverlay;
-        StatusText.Text = $"Profil „{profile.Name}“ geladen.";
+        StatusText.Text = $"Profile \"{profile.Name}\" loaded.";
     }
 
     private void NewProfile_Click(object sender, RoutedEventArgs e)
     {
         _selected = null; ProfilesList.SelectedItem = null;
         NameBox.Clear(); PathBox.Clear(); ProcessesBox.Clear(); ArgumentsBox.Clear(); CategoryBox.Text = "General"; FavoriteBox.IsChecked = false; PowerPlanBox.IsChecked = true; OverlayBox.IsChecked = true;
-        StatusText.Text = "Neues Profil: Angaben eintragen und speichern.";
+        StatusText.Text = "New profile: enter details and save.";
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        var dialog = new OpenFileDialog { Filter = "Programme (*.exe)|*.exe" };
+        var dialog = new OpenFileDialog { Filter = "Programs (*.exe)|*.exe" };
         if (dialog.ShowDialog() == true) PathBox.Text = dialog.FileName;
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(NameBox.Text) || !File.Exists(PathBox.Text))
-        { StatusText.Text = "Bitte gib einen Namen und eine gültige Spiel-EXE an."; return; }
+        { StatusText.Text = _settings.Language == "en"
+            ? "Please enter a name and a valid game EXE."
+            : "Bitte gib einen Namen und eine gültige Spiel-EXE an."; return; }
         var profile = _selected ?? new GameProfile();
         profile.Name = NameBox.Text.Trim(); profile.ExecutablePath = PathBox.Text.Trim(); profile.Category = string.IsNullOrWhiteSpace(CategoryBox.Text) ? "General" : CategoryBox.Text.Trim();
         profile.LaunchArguments = ArgumentsBox.Text.Trim(); profile.IsFavorite = FavoriteBox.IsChecked == true;
@@ -75,14 +82,14 @@ public partial class MainWindow : Window
         profile.ShowPerformanceOverlay = OverlayBox.IsChecked == true;
         if (_selected is null) _settings.Profiles.Add(profile);
         _selected = profile; _store.Save(_settings); RefreshProfiles();
-        StatusText.Text = $"Profil „{profile.Name}“ gespeichert.";
+        StatusText.Text = $"Profile „{profile.Name}“ saved.";
     }
 
     private void Delete_Click(object sender, RoutedEventArgs e)
     {
         if (_selected is null) return;
         _settings.Profiles.Remove(_selected); _store.Save(_settings); NewProfile_Click(sender, e); RefreshProfiles();
-        StatusText.Text = "Profil gelöscht.";
+        StatusText.Text = "Profile deleted.";
     }
 
     private async void Launch_Click(object sender, RoutedEventArgs e)
@@ -98,7 +105,11 @@ public partial class MainWindow : Window
             previousPlan = _selected.UseHighPerformancePlan ? _powerPlans.GetActiveScheme() : null;
             if (_selected.UseHighPerformancePlan) _powerPlans.SetHighPerformance();
             var game = Process.Start(new ProcessStartInfo(_selected.ExecutablePath) { UseShellExecute = true, Arguments = _selected.LaunchArguments })
-                ?? throw new InvalidOperationException("Das Spiel konnte nicht gestartet werden.");
+                ?? throw new InvalidOperationException(
+                    _settings.Language == "en"
+                        ? "The game could not be started."
+                        : "Das Spiel konnte nicht gestartet werden."
+                );
             _selected.LaunchCount++;
             _selected.LastLaunchedUtc = DateTime.UtcNow;
             session = new GameSession { GameName = _selected.Name, StartedUtc = DateTime.UtcNow };
@@ -107,15 +118,30 @@ public partial class MainWindow : Window
             _store.Save(_settings);
             UpdateDashboard();
             if (_selected.ShowPerformanceOverlay) { overlay = new PerformanceOverlay(game, _selected.Name); overlay.Show(); }
-            StatusText.Text = $"{_selected.Name} läuft. Die Einstellungen werden danach wiederhergestellt.";
+            StatusText.Text = $"{_selected.Name} is running. Settings will be restored afterwards.";
             await Task.Run(() => game.WaitForExit());
-            StatusText.Text = $"{_selected.Name} beendet. Energieschema wiederhergestellt.";
+            StatusText.Text = $"{_selected.Name} ended. Power plan restored.";
         }
-        catch (Exception ex) { StatusText.Text = $"Fehler: {ex.Message}"; }
+        catch (Exception ex)
+        {
+            StatusText.Text = _settings.Language == "en"
+                ? $"Error: {ex.Message}"
+                : $"Fehler: {ex.Message}";
+        }
         finally
         {
             overlay?.Close();
-            if (previousPlan is not null) try { _powerPlans.SetScheme(previousPlan); } catch { }
+            if (previousPlan is not null)
+            {
+               try
+               {
+                    _powerPlans.SetScheme(previousPlan);
+               }
+               catch (Exception ex)
+               {
+                    Debug.WriteLine($"Failed to restore power plan: {ex.Message}");
+               }
+            }
             if (session is not null) { session.EndedUtc = DateTime.UtcNow; _store.Save(_settings); UpdateDashboard(); }
         }
     }
@@ -141,11 +167,15 @@ public partial class MainWindow : Window
         {
             case "dashboard":
                 SearchBox.Clear(); FavoritesOnlyBox.IsChecked = false;
-                StatusText.Text = "Dashboard geöffnet.";
+                StatusText.Text = _settings.Language == "en"
+                    ? "Dashboard opened."
+                    : "Dashboard geöffnet.";
                 break;
             case "library":
                 SearchBox.Focus();
-                StatusText.Text = "Bibliothek: Suche einen Titel oder eine Kategorie.";
+                StatusText.Text = _settings.Language == "en"
+                    ? "Library: Search for a game or category."
+                    : "Bibliothek: Suche einen Titel oder eine Kategorie.";
                 break;
             case "network":
                 await RunNetworkTestAsync();
@@ -157,7 +187,9 @@ public partial class MainWindow : Window
                 var window = new SettingsWindow(_settings) { Owner = this };
                 window.ShowDialog();
                 ApplyLanguage();
-                StatusText.Text = "Einstellungen aktualisiert.";
+                StatusText.Text = _settings.Language == "en"
+                    ? "Settings updated."
+                    : "Einstellungen aktualisiert.";
                 break;
         }
     }
@@ -166,13 +198,17 @@ public partial class MainWindow : Window
     {
         if (_selected is null)
         {
-            StatusText.Text = "Speichere zuerst das neue Spielprofil, dann kannst du es als Favorit markieren.";
+            StatusText.Text = _settings.Language == "en"
+                ? "Save the game profile first, then you can mark it as a favorite."
+                : "Speichere zuerst das neue Spielprofil, dann kannst du es als Favorit markieren.";
             return;
         }
         _selected.IsFavorite = FavoriteBox.IsChecked == true;
         _store.Save(_settings);
         RefreshProfiles();
-        StatusText.Text = _selected.IsFavorite ? "Zu den Favoriten hinzugefügt." : "Aus den Favoriten entfernt.";
+        StatusText.Text = _selected.IsFavorite
+            ? (_settings.Language == "en" ? "Added to favorites." : "Zu den Favoriten hinzugefügt.")
+            : (_settings.Language == "en" ? "Removed from favorites." : "Aus den Favoriten entfernt.");
     }
 
     private void ApplyLanguage()
@@ -215,18 +251,23 @@ public partial class MainWindow : Window
             launchTotal += profile.LaunchCount;
             if (profile.LastLaunchedUtc is not null && (lastPlayed?.LastLaunchedUtc is null || profile.LastLaunchedUtc > lastPlayed.LastLaunchedUtc)) lastPlayed = profile;
         }
-        ProfileCountText.Text = $"{_settings.Profiles.Count} Spiele";
-        LaunchCountText.Text = $"{launchTotal} insgesamt";
-        LastPlayedText.Text = lastPlayed?.Name ?? "Noch keines";
+        ProfileCountText.Text = $"{_settings.Profiles.Count} games";
+        LaunchCountText.Text = $"{launchTotal} total";
+        LastPlayedText.Text = lastPlayed?.Name ?? "None yet";
     }
 
     private async void NetworkTest_Click(object sender, RoutedEventArgs e) => await RunNetworkTestAsync();
 
     private async Task RunNetworkTestAsync()
     {
-        NetworkButton.IsEnabled = false; NetworkText.Text = "Teste …";
+        NetworkButton.IsEnabled = false; NetworkText.Text = _settings.Language == "en"
+                                            ? "Testing ..."
+                                            : "Teste ...";
         try { NetworkText.Text = await _network.TestAsync(); }
-        catch { NetworkText.Text = "Test nicht verfügbar"; }
+        catch (Exception ex)
+        {
+            NetworkText.Text = $"Test failed: {ex.Message}";
+        }
         finally { NetworkButton.IsEnabled = true; }
     }
 }

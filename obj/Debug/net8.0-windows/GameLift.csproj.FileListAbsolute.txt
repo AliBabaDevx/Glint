@@ -24,3 +24,4 @@ C:\Users\AURUMPC\Documents\Codex\2026-07-16\erstellen-2\GameLift\obj\Debug\net8.
 C:\Users\AURUMPC\Documents\Codex\2026-07-16\erstellen-2\GameLift\obj\Debug\net8.0-windows\GameLift.pdb
 C:\Users\AURUMPC\Documents\Codex\2026-07-16\erstellen-2\GameLift\obj\Debug\net8.0-windows\GameLift.genruntimeconfig.cache
 C:\Users\AURUMPC\Documents\Codex\2026-07-16\erstellen-2\GameLift\obj\Debug\net8.0-windows\ref\GameLift.dll
+C:\Users\AURUMPC\Documents\Codex\2026-07-16\erstellen-2\GameLift\obj\Debug\net8.0-windows\GameLift.sourcelink.json

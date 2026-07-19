@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("GameLift Community")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+336501662bc268a31e1718a7781127684deccd57")]
 [assembly: System.Reflection.AssemblyProductAttribute("GameLift")]
 [assembly: System.Reflection.AssemblyTitleAttribute("GameLift")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
